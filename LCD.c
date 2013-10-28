@@ -11,13 +11,13 @@
 //  PIN 1      |     GND    |     ---
 //  PIN 2      |     VCC    |     ---
 //  PIN 3      |     V0     |     ---
-//  PIN 4      |     RS     |     P5.0
+//  PIN 4      |     RS     |     P4.6
 //  PIN 5      |     RW     |     ---
-//  PIN 6      |     EN     |     P5.1
-//  PIN 7      |     DB0    |     ---
-//  PIN 8      |     DB1    |     ---
-//  PIN 9      |     DB2    |     ---
-//  PIN 10     |     DB3    |     ---
+//  PIN 6      |     EN     |     P4.7
+//  PIN 7      |     DB0    |     P5.0
+//  PIN 8      |     DB1    |     P5.1
+//  PIN 9      |     DB2    |     P5.2
+//  PIN 10     |     DB3    |     P5.3
 //  PIN 11     |     DB4    |     P5.4  
 //  PIN 12     |     DB5    |     P5.5     
 //  PIN 13     |     DB6    |     P5.6     
@@ -36,24 +36,29 @@
 //******************************************************************************
 
 // Define LCD - MSP port directions
+#define         LCD_COM_DIR             P4DIR
+#define         LCD_COM_OUT             P4OUT
 #define         LCD_DIR                 P5DIR
 #define         LCD_OUT                 P5OUT
 
 // Define LCD - MSP pin mapping 
-#define         LCD_PIN_RS              BIT0          // P1.0
-#define         LCD_PIN_EN              BIT1          // P1.1
-#define         LCD_PIN_D4              BIT4          // P1.4
-#define         LCD_PIN_D5              BIT5          // P1.5
-#define         LCD_PIN_D6              BIT6          // P1.6
-#define         LCD_PIN_D7              BIT7          // P1.7
+#define         LCD_PIN_RS              BIT6          // P4.6
+#define         LCD_PIN_EN              BIT7          // P4.7
+#define         LCD_PIN_D0              BIT0          // P5.0
+#define         LCD_PIN_D1              BIT1          // P5.1
+#define         LCD_PIN_D2              BIT2          // P5.2
+#define         LCD_PIN_D3              BIT3          // P5.3
+#define         LCD_PIN_D4              BIT4          // P5.4
+#define         LCD_PIN_D5              BIT5          // P5.5
+#define         LCD_PIN_D6              BIT6          // P5.6
+#define         LCD_PIN_D7              BIT7          // P5.7
 
-#define LCD_PIN_MASK ((LCD_PIN_RS | LCD_PIN_EN | LCD_PIN_D7 | LCD_PIN_D6 | LCD_PIN_D5 | LCD_PIN_D4))
+#define LCD_COM_MASK ((LCD_PIN_EN | LCD_PIN_RS))
+#define LCD_PIN_MASK ((LCD_PIN_D7 | LCD_PIN_D6 | LCD_PIN_D5 | LCD_PIN_D4 | LCD_PIN_D3 | LCD_PIN_D2 | LCD_PIN_D1 | LCD_PIN_D0))
 
 #define         TRUE                    1
 #define         FALSE                   0
 
-  
-}
 /*
 * Description: Function that tells LCD to read its data bus
 */
@@ -61,15 +66,15 @@ void enable()
 {
     
     // pull Enable bit low
-    LCD_OUT &= ~LCD_PIN_EN;
+    LCD_COM_OUT &= ~LCD_PIN_EN;
     __delay_cycles(200);
 
     // pull Enable bit high
-    LCD_OUT |= LCD_PIN_EN;
+    LCD_COM_OUT |= LCD_PIN_EN;
     __delay_cycles(200);
 
     // pull Enable bit low again
-    LCD_OUT &= ~LCD_PIN_EN;
+    LCD_COM_OUT &= ~LCD_PIN_EN;
     __delay_cycles(200);
 }
 
@@ -84,6 +89,7 @@ void enable()
 void sendByte(char byteToSend, int isData)
 {
     // clear out all pins
+    LCD_COM_OUT &= ~LCD_COM_MASK;
     LCD_OUT &= ~LCD_PIN_MASK;
 
     // set High Nibble (HN) - 
@@ -91,21 +97,24 @@ void sendByte(char byteToSend, int isData)
     // apparent here. We can set the 
     // DB7 - DB4 just by setting P1.7 - P1.4 
     // using a simple assignment
-    LCD_OUT |= (byteToSend & 0xF0);
+    //LCD_OUT |= (byteToSend & 0xF0);
+    LCD_OUT |= byteToSend;
  
     if (isData == TRUE)
     {
-        LCD_OUT |= LCD_PIN_RS;
+        //LCD_OUT |= LCD_PIN_RS;
+        LCD_COM_OUT |= LCD_PIN_RS;
     }
     else
     {
-        LCD_OUT &= ~LCD_PIN_RS;
+        //LCD_OUT &= ~LCD_PIN_RS;
+        LCD_COM_OUT &= ~LCD_PIN_RS;
     }
 
     // we've set up the input voltages to the LCD.
     // Now tell it to read them.
     enable();
-
+/*
     // set Low Nibble (LN) -
     // usefulness of the identity mapping
     // apparent here. We can set the 
@@ -126,31 +135,7 @@ void sendByte(char byteToSend, int isData)
     // we've set up the input voltages to the LCD.
     // Now tell it to read them.
     enable();
-}
-
-/*
-* Description: Set position of cursor on screen
-* Parameters
-*    - row: zero based row #
-*    - col: zero based column #
 */
-void lcdSetCursorPosition(char row, char col)
-{
-    char address;
-
-    // construct address from (row, col) pair
-    if (row == 0)
-    {
-        address = 0;
-    }
-    else
-    {
-        address = 0x40;
-    }
-
-    address |= col;
-
-    sendByte(0x80 | address, FALSE);
 }
 
 /*
@@ -174,7 +159,9 @@ void initLCD(void)
     // set the MSP pin configurations
     // and bring them to low
     LCD_DIR |= LCD_PIN_MASK;
-    LCD_OUT &= ~LCD_PIN_MASK;
+    LCD_OUT |= LCD_PIN_MASK;
+    LCD_COM_DIR |= LCD_COM_MASK;
+    LCD_COM_OUT |= LCD_COM_MASK;
 
     // wait for the LCD to warm up and reach
     // active regions. Remember MSPs can power
@@ -182,22 +169,25 @@ void initLCD(void)
     __delay_cycles(100000);
 
     // initialize the LCD module
-    // 1. Set 4-bit input 
-    LCD_OUT &= ~LCD_PIN_RS;
-    LCD_OUT &= ~LCD_PIN_EN;
-
-    LCD_OUT = 0x20;
-    enable();
-
-    // set 4-bit input - second time.
-    // (as reqd by the spec.)
-    sendByte(0x28, FALSE);
-
-    // 2. Display on, cursor on, blink cursor
-    sendByte(0x0E, FALSE);
+    // Set 8-bit input first line
+    sendByte(0x30, FALSE);
     
-    // 3. Cursor move auto-increment
+    // set 4-bit input second line
+    sendByte(0x38, FALSE);
+    
+    // turn LCD off
+    sendByte(0x08, FALSE);
+    
+    clearDisplay();
+
+    
+    // Display on, cursor on, blink cursor
+    sendByte(0x0F, FALSE);
+    
+    // Cursor move auto-increment
     sendByte(0x06, FALSE);
+    
+    sendByte(0x65, TRUE);
 }
 
 /*
@@ -229,8 +219,6 @@ int main(void)
 
     initLCD();
 
-    clearDisplay();
-
     mssgDisplay("Hello World!");
 
     while (1)
@@ -238,6 +226,6 @@ int main(void)
         __delay_cycles(1000);
     }
 
-    __bis_SR_register(LPM0_bits);                 // CPU off, enable interrupts
+//    __bis_SR_register(LPM0_bits);                 // CPU off, enable interrupts
     
 }
