@@ -1,5 +1,33 @@
 #include <msp430f6736.h>
 
+//******************************************************************************
+//
+//
+//  MSP430 digital potentiometer interface
+//
+//             |     PD     |  
+//  DP Pin #   |  Function  |   MSP Pin #
+//  ---------------------------------------
+//  PIN 1      |     ~CS    |     P1.7
+//  PIN 2      |     SCK    |     P1.6
+//  PIN 3      |   SDI/SDO  |     P1.3
+//  PIN 4      |     VSS    |     ---
+//  PIN 5      |     P0A    |     ---
+//  PIN 6      |     W      |     ---
+//  PIN 7      |     P0B    |     ---
+//  PIN 8      |     VDD    |     ---
+//
+//
+//  VSS -> GND
+//  P0A -> voltage divisor
+//  W   -> Mixer
+//  P0B -> GND
+//  VDD -> +5V Regulator
+//
+//
+//******************************************************************************
+
+
 unsigned char MST_Data;
 
 int main(void)
@@ -7,14 +35,13 @@ int main(void)
 
     WDTCTL = WDTPW | WDTHOLD;                     // Stop WDT
 
-    // Setup P1.0 output, P1.2 UCA0SOMI, P1.3 UCA0SIMO, P1.6 UCA0CLK
-    P1OUT &= ~BIT7;                               // Clear P1.0
-    P1DIR |= BIT7;                                // Set P1.0 to output direction
-    P1SEL |= BIT3 | BIT6;                         // Set P1.0, P1.3,P1.6 to non-IO
+    // Setup P1.7 output, P1.3 UCA0SIMO, P1.6 UCA0CLK
+    P1OUT &= ~BIT7;                               // Clear P1.7
+    P1DIR |= BIT7;                                // Set P1.7 to output direction
+    P1SEL |= BIT3 | BIT6;                         // Set P1.3,P1.6 to non-IO
 
-     // Setup additional button
-    //P1IN &= ~BIT5;                                // Clear P1.5
-    P2DIR &= ~BIT0;                               // Set P1.5 as input
+    // Setup INTERRUPT here
+    
     
     // Setup eUSCI_A0
     UCA0CTLW0 |= UCSWRST;                         // **Put state machine in reset**
