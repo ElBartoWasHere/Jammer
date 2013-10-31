@@ -27,7 +27,7 @@
 //
 //
 //
-//
+//  BUTTON -> P1.5
 //
 //
 //
@@ -54,11 +54,13 @@
 #define         LCD_PIN_D6              BIT6          // P5.6
 #define         LCD_PIN_D7              BIT7          // P5.7
 
+// Define pin masks
 #define LCD_COM_MASK ((LCD_PIN_EN | LCD_PIN_RS))
 #define LCD_PIN_MASK ((LCD_PIN_D7 | LCD_PIN_D6 | LCD_PIN_D5 | LCD_PIN_D4 | LCD_PIN_D3 | LCD_PIN_D2 | LCD_PIN_D1 | LCD_PIN_D0))
 
 #define         TRUE                    1
 #define         FALSE                   0
+#define         DISPLAY_PERIOD          5000000
 
 /*
 * Description: Function that tells LCD to read its data bus
@@ -218,27 +220,32 @@ void mssgDisplay(char *text)
     }
 }
 
+// Port 1 interrupt service routine
+#pragma vector=PORT1_VECTOR
+__interrupt void Port_1(void)
+{
+    initLCD();
+
+    mssgDisplay("Center Freq: ###Charge: %%%");
+    
+    __delay_cycles(DISPLAY_PERIOD);
+    
+    LCD_COM_OUT &= ~LCD_VCC;                    // Turn Off LCD
+    P1IFG &= ~BIT5;                             // P1.5 IFG cleared
+}
+
 /*
 * Description: Main function
 */
 int main(void)
 {
 
-    WDTCTL = WDTPW | WDTHOLD;                     // Stop WDT
+    WDTCTL = WDTPW | WDTHOLD;                   // Stop WDT
 
-    initLCD();
+    P1IE |= BIT5;                               // Enable P1.5 Interrupt
+    P1IES &= ~BIT5;                             // Set Rising Edge
+    P1IFG &= ~BIT5;                             // Clear P1.5 IFG
 
-    mssgDisplay("Center Freq: ###Charge: %%%");
-    
-    __delay_cycles(3000000);
-    
-    LCD_COM_OUT &= ~LCD_VCC;                    // Turn Off LCD
-/*
-    while (1)
-    {
-        __delay_cycles(1000);
-    }
-*/
-    __bis_SR_register(LPM0_bits);               // CPU Low-Power Mode 0
+    __bis_SR_register(LPM0_bits | GIE);         // CPU Low-Power Mode 0
     
 }
