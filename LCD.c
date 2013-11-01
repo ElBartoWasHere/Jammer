@@ -241,11 +241,13 @@ int main(void)
 {
 
     WDTCTL = WDTPW | WDTHOLD;                   // Stop WDT
-
+    
+    P1DIR &= ~BIT5;
+//    P1IN &= ~BIT5;
+    P1IFG &= ~BIT5;                             // Clear P1.5 IFG
     P1IE |= BIT5;                               // Enable P1.5 Interrupt
     P1IES &= ~BIT5;                             // Set Rising Edge
-    P1IFG &= ~BIT5;                             // Clear P1.5 IFG
 
-    __bis_SR_register(LPM0_bits | GIE);         // CPU Low-Power Mode 0
-    
+    __bis_SR_register(LPM4_bits | GIE);         // CPU Low-Power Mode 0
+    //__no_operation();
 }
