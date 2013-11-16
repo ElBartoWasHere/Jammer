@@ -26,13 +26,6 @@
 //  PIN 16     |     LED-   |     DVSS
 //
 //
-//
-//  BUTTON -> P1.5
-//
-//
-//
-//
-//
 //******************************************************************************
 
 // Define LCD - MSP port directions
@@ -155,12 +148,35 @@ void lcdSetCursorPosition(char row, char col)
 }
 
 /*
-* Description: Initialize LCD at power-up.
-*
-* NOTE: Do not call twice, or nuclear bomb might set off. Very common when
-*       LCD power source is different from MCU power source.
+* Description: Print character array on LCD display
+* Parameters
+*    - text: null terminated character array (string)
 */
-void initLCD(void)
+void mssgDisplay(char *text)
+{
+    char *c;
+    int count = 16;
+    c = text;
+
+    // Send characters one by one until string is empty
+    while ((c != 0) && (*c != 0))
+    {
+        // after 16 characters start writing in second line
+        if(count == 0)
+          lcdSetCursorPosition(1,0);
+      
+        sendByte(*c, TRUE);
+        c++;
+        count--;
+    }
+}
+
+/*
+* Description: Initialize LCD at power-up.
+* Parameters
+*    - text: null terminated character array (string)
+*/
+void initLCD(char *text)
 {
     LCD_COM_DIR |= LCD_VCC;
     LCD_COM_OUT |= LCD_VCC;
@@ -189,65 +205,10 @@ void initLCD(void)
     // clear display
     clearDisplay();
     
-//    sendByte(0x65, TRUE);               // e
-//    sendByte(0x66, TRUE);               // f
-//    sendByte(0x67, TRUE);               // g
-//    sendByte(0x68, TRUE);               // h
-    
-}
-
-/*
-* Description: Print character array on LCD display
-* Parameters
-*    - text: null terminated character array (string)
-*/
-void mssgDisplay(char *text)
-{
-    char *c;
-    int count = 16;
-    c = text;
-
-    // Send characters one by one until string is empty
-    while ((c != 0) && (*c != 0))
-    {
-        // after 16 characters start writing in second line
-        if(count == 0)
-          lcdSetCursorPosition(1,0);
-      
-        sendByte(*c, TRUE);
-        c++;
-        count--;
-    }
-}
-
-// Port 1 interrupt service routine
-#pragma vector=PORT1_VECTOR
-__interrupt void Port_1(void)
-{
-    initLCD();
-
-    mssgDisplay("Center Freq: ###Charge: %%%");
+    // Display *text message
+    mssgDisplay(text);
     
     __delay_cycles(DISPLAY_PERIOD);
     
-    LCD_COM_OUT &= ~LCD_VCC;                    // Turn Off LCD
-    P1IFG &= ~BIT5;                             // P1.5 IFG cleared
-}
-
-/*
-* Description: Main function
-*/
-int main(void)
-{
-
-    WDTCTL = WDTPW | WDTHOLD;                   // Stop WDT
-    
-    P1DIR &= ~BIT5;
-//    P1IN &= ~BIT5;
-    P1IFG &= ~BIT5;                             // Clear P1.5 IFG
-    P1IE |= BIT5;                               // Enable P1.5 Interrupt
-    P1IES &= ~BIT5;                             // Set Rising Edge
-
-    __bis_SR_register(LPM4_bits | GIE);         // CPU Low-Power Mode 0
-    //__no_operation();
+    LCD_COM_OUT &= ~LCD_VCC;                          // Turn Off LCD
 }
