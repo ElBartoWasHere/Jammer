@@ -1,11 +1,11 @@
 #include <msp430f6736.h>
-#include <LCD.h>
-#include <FuelGauge.h>
+#include "LCD.h"
+#include "FuelGauge.h"
 
 //******************************************************************************
-//	Description: This module controls three components using an msp430f6736 as
-//				 the MCU. It comunicates with components through SPI, I2C, and 
-//				 GPIO. 
+//  Description: This module controls three components using an msp430f6736 as
+//		 the MCU. It comunicates with components through SPI, I2C, and 
+//		 GPIO. 
 //
 //******************************************************************************
 //  MSP430 LCD interface
@@ -75,18 +75,39 @@
 //******************************************************************************
 //
 //  BUTTON LCD -> P1.0
-//	SWITCH GSM850 -> P1.1
-//	SWITCH GSM900 -> P1.2
+//  SWITCH GSM850 -> P1.1
+//  SWITCH GSM900 -> P1.2
 //
 //
 //
 //******************************************************************************
 
 // Define Pins
+#define         BUTTON1         BIT0
+#define         SWITCH1         BIT1
+#define         SWITCH2         BIT2
+#define         INTERRUPT_MASK  (BUTTON1 | SWITCH1 | SWITCH2)
 
 // Create variables
+unsigned char batterySOC;
+unsigned char percentage1;
+unsigned char percentage2;
 
 // Create functions here
+void test()
+{
+  batterySOC = readSOC();
+  percentage1 = (batterySOC & 0xF0);
+  percentage2 = (batterySOC & 0x0F);
+  
+  char mssg[33] = "CF: 850  1900   Charge:   %";
+  mssg[25] = percentage1;
+  mssg[26] = percentage2;
+  
+  char *mssgPtr = mssg;
+  
+  initLCD(mssgPtr);
+}
 
 /*
 *  Description: 
@@ -94,16 +115,42 @@
 */
 int main (void)
 {
-    WDTCTL = WDTPW | WDTHOLD;
+  WDTCTL = WDTPW | WDTHOLD;
 	
-	// Init Interrupts
-	
-	// Init I2C
-	
-	// Init SPI
-	
-	__bis_SR_register(LPM0 | GIE);
+  // Init Interrupts
+  P1DIR &= ~INTERRUPT_MASK;
+  P1IFG &= ~INTERRUPT_MASK;
+  P1IE |= INTERRUPT_MASK;
+  P1IES &= ~INTERRUPT_MASK;
+  
+  // Init I2C
+  initI2C();
+  
+  __delay_cycles(100);
+  
+  // Init SPI
+  
+  test();
+  
+  __bis_SR_register(LPM0 | GIE);
 }
 
 // Interrupt Vectors here
-
+// Port 1 interrupt service routine
+#pragma vector=PORT1_VECTOR
+__interrupt void Port_1(void)
+{
+  batterySOC = readSOC();
+  percentage1 = (batterySOC & 0xF0);
+  percentage2 = (batterySOC & 0x0F);
+  
+  char mssg[33] = "CF: 850  1900   Charge:   %";
+  mssg[25] = percentage1;
+  mssg[26] = percentage2;
+  
+  char *mssgPtr = mssg;
+  
+  initLCD(mssgPtr);
+  
+  P1IFG &= ~INTERRUPT_MASK;
+}
