@@ -94,20 +94,6 @@ unsigned char percentage1;
 unsigned char percentage2;
 
 // Create functions here
-void test()
-{
-  batterySOC = readSOC();
-  percentage1 = (batterySOC & 0xF0);
-  percentage2 = (batterySOC & 0x0F);
-  
-  char mssg[33] = "CF: 850  1900   Charge:   %";
-  mssg[25] = percentage1;
-  mssg[26] = percentage2;
-  
-  char *mssgPtr = mssg;
-  
-  initLCD(mssgPtr);
-}
 
 /*
 *  Description: 
@@ -123,16 +109,18 @@ int main (void)
   P1IE |= INTERRUPT_MASK;
   P1IES &= ~INTERRUPT_MASK;
   
+  // Setup I2C pins for UCB0SCL, UCB0SDA
+  P2SEL |= BIT0 | BIT1;
+  
   // Init I2C
   initI2C();
-  
-  __delay_cycles(100);
-  
+    
   // Init SPI
-  
-  test();
-  
-  __bis_SR_register(LPM0 | GIE);
+    
+  while(1)
+  {
+    __bis_SR_register(LPM0 | GIE);
+  }
 }
 
 // Interrupt Vectors here
@@ -140,17 +128,21 @@ int main (void)
 #pragma vector=PORT1_VECTOR
 __interrupt void Port_1(void)
 {
+  // Read battery percentage
   batterySOC = readSOC();
   percentage1 = (batterySOC & 0xF0);
   percentage2 = (batterySOC & 0x0F);
   
+  // Make message to display in LCD
   char mssg[33] = "CF: 850  1900   Charge:   %";
-  mssg[25] = percentage1;
-  mssg[26] = percentage2;
+  mssg[24] = percentage1;
+  mssg[25] = percentage2;
   
   char *mssgPtr = mssg;
   
+  // Initialize LCD and display message
   initLCD(mssgPtr);
   
+  // Clear Port 1 interrupt flag
   P1IFG &= ~INTERRUPT_MASK;
 }
